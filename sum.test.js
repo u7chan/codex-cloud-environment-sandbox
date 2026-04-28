@@ -1,8 +1,7 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "bun:test";
 
 import { sum } from "./src/sum.js";
 
 test("sum adds two numbers", () => {
-  assert.equal(sum(1, 2), 3);
+  expect(sum(1, 2)).toBe(3);
 });
