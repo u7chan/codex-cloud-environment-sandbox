@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docs Screenshot Article"
+  short_description: "スクショ付き手順記事を構成してMarkdown化する"
+  default_prompt: "Use $docs-screenshot-article to create a screenshot-driven setup guide under docs/."
