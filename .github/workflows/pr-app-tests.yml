@@ -1,0 +1,103 @@
+name: PR App Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  detect-changed-apps:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.collect.outputs.apps }}
+      has_apps: ${{ steps.collect.outputs.has_apps }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect changed app directories
+        id: collect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          mapfile -t changed_files < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+
+          declare -A app_map=()
+
+          for file in "${changed_files[@]}"; do
+            [[ -z "$file" ]] && continue
+            [[ "$file" != apps/*/* ]] && continue
+
+            app_dir="$(cut -d'/' -f1-2 <<< "$file")"
+            rel_path="${file#${app_dir}/}"
+            file_name="$(basename "$rel_path")"
+
+            case "$file_name" in
+              *.md|*.mdx|*.txt|*.rst|*.adoc)
+                continue
+                ;;
+            esac
+
+            app_map["$app_dir"]=1
+          done
+
+          if [ "${#app_map[@]}" -eq 0 ]; then
+            echo 'apps=[]' >> "$GITHUB_OUTPUT"
+            echo 'has_apps=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          apps_json="$(printf '%s\n' "${!app_map[@]}" | sort | jq -R . | jq -cs .)"
+          echo "apps=$apps_json" >> "$GITHUB_OUTPUT"
+          echo 'has_apps=true' >> "$GITHUB_OUTPUT"
+
+  test-changed-apps:
+    needs: detect-changed-apps
+    if: needs.detect-changed-apps.outputs.has_apps == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.detect-changed-apps.outputs.apps) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run tests for changed app
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          app='${{ matrix.app }}'
+          echo "Testing $app"
+
+          if [ -f "$app/package.json" ]; then
+            npm --prefix "$app" test
+            exit 0
+          fi
+
+          if compgen -G "$app/tests/*.test.js" >/dev/null; then
+            bun test "$app/tests"
+            exit 0
+          fi
+
+          if compgen -G "$app/tests/test_*.py" >/dev/null; then
+            PYTHONPATH="$app" python3 -m unittest discover -s "$app/tests" -p 'test_*.py'
+            exit 0
+          fi
+
+          echo "No supported test pattern found for $app" >&2
+          exit 1
