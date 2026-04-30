@@ -6,10 +6,11 @@ on:
 
 jobs:
   detect-changed-apps:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     outputs:
       apps: ${{ steps.collect.outputs.apps }}
       has_apps: ${{ steps.collect.outputs.has_apps }}
+      app_count: ${{ steps.collect.outputs.app_count }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,9 +47,14 @@ jobs:
             app_map["$app_dir"]=1
           done
 
-          if [ "${#app_map[@]}" -eq 0 ]; then
+          app_count="${#app_map[@]}"
+          echo "app_count=$app_count" >> "$GITHUB_OUTPUT"
+
+          if [ "$app_count" -eq 0 ]; then
             echo 'apps=[]' >> "$GITHUB_OUTPUT"
             echo 'has_apps=false' >> "$GITHUB_OUTPUT"
+            echo 'Detected changed apps: 0'
+            echo 'No non-documentation changes were found under apps/*, so test job will be skipped.'
             exit 0
           fi
 
@@ -56,10 +62,13 @@ jobs:
           echo "apps=$apps_json" >> "$GITHUB_OUTPUT"
           echo 'has_apps=true' >> "$GITHUB_OUTPUT"
 
+          echo "Detected changed apps: $app_count"
+          echo "Changed app list: $apps_json"
+
   test-changed-apps:
     needs: detect-changed-apps
     if: needs.detect-changed-apps.outputs.has_apps == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     strategy:
       fail-fast: false
       matrix:
