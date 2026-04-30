@@ -1,9 +1,11 @@
 {
-  "name": "node-test-minimal-sample",
+  "name": "codex-cloud-environment-sandbox",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test"
+    "test": "bun test apps/bun-sample/tests",
+    "test:bun-sample": "bun test apps/bun-sample/tests",
+    "test:python-sample": "PYTHONPATH=apps/python-sample python3 -m unittest discover -s apps/python-sample/tests -p 'test_*.py'"
   }
 }
