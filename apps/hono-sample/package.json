@@ -1,0 +1,8 @@
+{
+  "name": "hono-sample",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.tsx"
+  }
+}
