@@ -6,6 +6,11 @@
   "scripts": {
     "test": "bun test apps/bun-sample/tests",
     "test:bun-sample": "bun test apps/bun-sample/tests",
-    "test:python-sample": "PYTHONPATH=apps/python-sample python3 -m unittest discover -s apps/python-sample/tests -p 'test_*.py'"
+    "test:python-sample": "PYTHONPATH=apps/python-sample python3 -m unittest discover -s apps/python-sample/tests -p 'test_*.py'",
+    "dev:hono-sample": "bun run apps/hono-sample/src/index.tsx",
+    "test:hono-sample": "cd apps/hono-sample && bun test tests"
+  },
+  "dependencies": {
+    "hono": "^4.10.0"
   }
 }
